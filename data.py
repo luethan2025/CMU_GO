@@ -32,7 +32,7 @@ def list_files_recursive(directory):
                         image_g_median.append(g.getpixel((i,j)))
     return (statistics.mean(img_r_median)/255, statistics.mean(image_b_median)/255, 
             statistics.mean(image_g_median)/255, statistics.stdev(img_r_median)/255, 
-            statistics.stdev(image_b_median), statistics.stdev(image_g_median)/255, 
+            statistics.stdev(image_b_median)/255, statistics.stdev(image_g_median)/255, 
             statistics.mean(img_height_median),statistics.median(img_height_median),
             statistics.mean(image_width_median),statistics.median(image_width_median),
             image_count,min(img_height_median),max(img_height_median),
