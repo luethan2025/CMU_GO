@@ -10,11 +10,19 @@ RESIZE_HEIGHT = 500
 
 if __name__ == "__main__":
     cwd = Path.cwd()
+    parent_dest_folder = cwd / "rescaled"
+    if not os.path.exists(parent_dest_folder):
+        os.makedirs(parent_dest_folder, exist_ok=True)
+
+
     objects = [Path(f.path).name for f in os.scandir(cwd / "dataset") if f.is_dir()]
 
     for object in objects: 
         src_folder = cwd / "dataset" / object
-        dest_folder = cwd / "rescaled_dataset" / object
+        dest_folder = parent_dest_folder / object
+
+        if not os.path.exists(dest_folder):
+            os.makedirs(dest_folder, exist_ok=True)
         
         count = 1
         for file in os.listdir(src_folder): 
