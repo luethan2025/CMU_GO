@@ -1,14 +1,14 @@
-import os
-from pathlib import Path
+import os.path
 import re
 import cv2
 import numpy as np
 from tabulate import tabulate
+import argparse
 
 def int_sort(filepath):
     return int(re.search(r'(\d+)', filepath).group(0))
 
-def compute_statistics(folders):
+def compute_statistics(dirs):
     width = []
     height = []
     red_channel = []
@@ -22,9 +22,11 @@ def compute_statistics(folders):
         'green_channel': green_channel,
         'blue_channel': blue_channel
     }
-    for folder in folders:
-        for img_path in sorted(os.listdir(folder), key=int_sort):
-            img = cv2.imread(cwd / "dataset" / folder / img_path)
+    for dir in dirs:
+        print(f'Parsing {dir}...', end='\r', flush=True)
+        for img_file in sorted(os.listdir(dir), key=int_sort):
+            img_path = os.path.join(os.getcwd(), 'dataset', dir, img_file)
+            img = cv2.imread(img_path)
 
             # (height, width, channel)
             h, w, _ = img.shape
@@ -34,15 +36,27 @@ def compute_statistics(folders):
             statistics['red_channel'].append(np.mean(img[:,:,2]))
             statistics['green_channel'].append(np.mean(img[:,:,1]))
             statistics['blue_channel'].append(np.mean(img[:,:,0]))
-
+        # clear line
+        print(' ' * 80, end='\r')
     return statistics
                 
-if __name__ == "__main__":
-    cwd = Path.cwd()
-    objects = [Path(f.path).name for f in os.scandir(cwd / "dataset") if f.is_dir()]
-    folders = sorted([cwd / "dataset" / object for object in objects])
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog='image_statistics.py',
+                                     description='Outputs height, width, and channel statistics about the dataset')
+    parser.add_argument('--filename', type=str, default='statistic.npz')
+    args = parser.parse_args()
+    out_filename = args.filename
+    if not out_filename.endswith('.npz'):
+        out_filename += '.npz'
 
-    statistics = compute_statistics(folders)
+    dataset_path = os.path.join(os.getcwd(), 'dataset')
+
+    objects = [obj.name for obj in os.scandir(dataset_path) if obj.is_dir()]
+    dirs = sorted([
+        os.path.join(dataset_path, obj)
+            for obj in objects
+    ])
+    statistics = compute_statistics(dirs)
 
     max_height = np.max(statistics['height'])
     max_width = np.max(statistics['width'])
@@ -61,8 +75,11 @@ if __name__ == "__main__":
     median_height = int(np.median(statistics['height']))
     median_width = int(np.median(statistics['width']))
     
-    data = [['height', max_height, min_height, avg_height, height_std, median_height],
-            ['width', max_width, min_width, avg_width, width_std, median_width]]
+    data = [
+        ['height', max_height, min_height, avg_height, height_std, median_height],
+        ['width', max_width, min_width, avg_width, width_std, median_width]
+    ]
+    print(' Height and width statistics:')
     tab = tabulate(data, headers=['', 'max', 'min', 'mean', 'std', 'median'], tablefmt='fancy_grid')
     print(tab, end='\n\n')
 
@@ -72,12 +89,26 @@ if __name__ == "__main__":
     avg_blue = np.round(np.mean(statistics['blue_channel']) / 255, 3)
 
     # round to 3 digits
-    red_std = np.round(np.std(statistics['red_channel']) / 255, 3)
-    green_std = np.round(np.std(statistics['green_channel']) / 255, 3)
-    blue_std = np.round(np.std(statistics['blue_channel']) / 255, 3)
+    std_red = np.round(np.std(statistics['red_channel']) / 255, 3)
+    std_green = np.round(np.std(statistics['green_channel']) / 255, 3)
+    std_blue = np.round(np.std(statistics['blue_channel']) / 255, 3)
 
-    data = [['red', avg_red, red_std],
-            ['green', avg_green, green_std],
-            ['red', avg_blue, blue_std]]
+    print(' Channel statistics:')
+    data = [
+        ['red', avg_red, std_red],
+        ['green', avg_green, std_green],
+        ['red', avg_blue, std_blue]
+    ]
     tab = tabulate(data, headers=['', 'mean', 'std'], tablefmt='fancy_grid')
-    print(tab)
+    print(tab, end='\n\n')
+
+    print(f'Writing data into {out_filename}...')
+    np.savez(out_filename,
+             avg_red=avg_red,
+             avg_green=avg_green,
+             avg_blue=avg_blue,
+             std_red=std_red,
+             std_green=std_green,
+             std_blue=std_blue,
+    )
+    print("Done")
